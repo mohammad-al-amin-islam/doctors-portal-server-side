@@ -28,7 +28,39 @@ async function run() {
             res.send(result);
         });
 
+        //available slots finding
+        app.get('/available', async (req, res) => {
 
+            const date = req.query.date;
+
+            //load all services
+            const services = await serviceCollection.find().toArray();
+
+            //load all booking 
+            const query = { date: date }
+            const booking = await bookingCollection.find(query).toArray();
+
+            //get booking services
+            services.map(service => {
+                const serviceBookings = booking.filter(b => b.treatmentName === service.name);
+                const booked = serviceBookings.map(s => s.slot);
+                // service.booked = serviceBookings.map(s => s.slot);
+
+                const available = service.slots.filter(s => !booked.includes(s));
+                service.slots = available;
+            })
+
+            res.send(services);
+        });
+
+        app.get('/boking', async (req, res) => {
+            const patient = req.query.email;
+            const query = { patientEmail: patient }
+            const booking = await bookingCollection.find(query).toArray();
+            res.send(booking);
+        })
+
+        //for booking add to db
         app.post('/booking', async (req, res) => {
             const booking = req.body;
             const query = { treatmentName: booking.treatmentName, date: booking.date, patientEmail: booking.patientEmail };
