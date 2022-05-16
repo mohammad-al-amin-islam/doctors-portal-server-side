@@ -75,7 +75,7 @@ async function run() {
                     $set: { role: 'admin' }
                 };
                 const result = await userCollection.updateOne(filter, updateDoc);
-                res.send(result);
+                res.send(result)
             }
             else {
                 res.status(403).send({ message: 'Forbidden' })
