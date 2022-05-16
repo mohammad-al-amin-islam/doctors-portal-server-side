@@ -48,6 +48,41 @@ async function run() {
             res.send(result);
         });
 
+        //loading all users
+        app.get('/user', verifyJWT, async (req, res) => {
+            const user = await userCollection.find().toArray();
+            res.send(user);
+        });
+
+
+        //only admin can access admin panell
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email })
+            const isAdmin = user?.role === 'admin';
+            res.send({ admin: isAdmin });
+        })
+
+        //make addmin a user
+        app.put('/user/admin/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const decodedEmail = req.decoded.email;
+
+            const requesterInfo = await userCollection.findOne({ email: decodedEmail });
+            if (requesterInfo.role === 'admin') {
+                const filter = { email: email };
+                const updateDoc = {
+                    $set: { role: 'admin' }
+                };
+                const result = await userCollection.updateOne(filter, updateDoc);
+                res.send(result);
+            }
+            else {
+                res.status(403).send({ message: 'Forbidden' })
+            }
+
+        })
+
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
             const filter = { email: email };
@@ -57,7 +92,7 @@ async function run() {
                 $set: user
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
-            const token = jwt.sign({ email: email }, process.env.ACCESS_SECRET_TOKEN, { expiresIn: '1h' })
+            const token = jwt.sign({ email: email }, process.env.ACCESS_SECRET_TOKEN, { expiresIn: '1d' })
             res.send({ result, token });
         })
 
