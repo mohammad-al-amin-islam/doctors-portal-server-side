@@ -4,6 +4,9 @@ const app = express();
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
+var nodemailer = require('nodemailer');
+var sgTransport = require('nodemailer-sendgrid-transport');
+
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
 
@@ -32,6 +35,48 @@ function verifyJWT(req, res, next) {
     })
 }
 
+
+
+// confirm mail sent
+var options = {
+    auth: {
+        api_key: process.env.EMAIL_SENDER_KEY
+    }
+}
+
+var emailClient = nodemailer.createTransport(sgTransport(options));
+
+
+//sent mail function
+function sendApoinmentMail(booking) {
+    const { patientName, treatmentName, date, patientEmail, slot } = booking;
+    var email = {
+        from: process.env.SENDER_EMAIL,
+        to: patientEmail,
+        subject: `Confirmation of ${treatmentName} booking  on ${date} at ${slot}`,
+        text: `Confirmation of ${treatmentName} booking  on ${date} at ${slot}`,
+        html: `
+        <div>
+            <h3>Dear ${patientName}</h3> 
+            <p>Your ${treatmentName} is confirmed</p>       
+            <p>Looking forward to see you on ${date} at ${slot}</p>       
+            <h3>Our Addresses</h3>
+            <h4>Dhaka,Bangladesh</h4>
+            <a href="https://doctors-portal-6f2bf.web.app/">Unsubscribe</a>
+        </div>
+        `
+    };
+
+    emailClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('Message sent: ', info);
+        }
+    });
+
+}
 
 async function run() {
 
@@ -148,6 +193,9 @@ async function run() {
                 return res.send({ success: false, booking: exist })
             }
             const result = await bookingCollection.insertOne(booking);
+
+            //send confirmation email
+            sendApoinmentMail(booking)
             res.send({ success: true, result });
         });
 
