@@ -89,6 +89,7 @@ async function run() {
         const bookingCollection = client.db("doctor_portal").collection("booking");
         const userCollection = client.db("doctor_portal").collection("users");
         const doctorCollection = client.db("doctor_portal").collection("doctors");
+        const paymentCollection = client.db("doctor_portal").collection("payments");
 
         const verifyAdmin = async (req, res, next) => {
             const decodedEmail = req.decoded.email;
@@ -211,6 +212,23 @@ async function run() {
         });
 
 
+        //update booking
+        app.patch('/booking/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: data.transactionId
+                }
+            }
+            const payment = await paymentCollection.insertOne(data);
+            const updateBooking = await bookingCollection.updateOne(filter, updateDoc);
+            res.send(updateBooking);
+        })
+
+
         //doctor added
         app.post('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
             const data = req.body;
@@ -232,6 +250,7 @@ async function run() {
             res.send(result);
         });
 
+        //payment api
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const { price } = req.body;
             const ammount = price * 100;
