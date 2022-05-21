@@ -7,7 +7,10 @@ const jwt = require('jsonwebtoken');
 var nodemailer = require('nodemailer');
 var sgTransport = require('nodemailer-sendgrid-transport');
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 
@@ -182,6 +185,14 @@ async function run() {
                 return res.status(403).send({ message: 'Forbidden' });
             }
 
+        });
+
+        //booking info using id
+        app.get('/booking/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await bookingCollection.findOne(query);
+            res.send(result);
         })
 
         //for booking add to db
@@ -219,6 +230,20 @@ async function run() {
             const filter = { email: email }
             const result = await doctorCollection.deleteOne(filter);
             res.send(result);
+        });
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const ammount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: ammount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+
         })
 
     }
